@@ -5,8 +5,13 @@
 #include <algorithm>
 #include <iostream>
 #include <random>
+#include <fstream>
+
 
 namespace NN {
+
+
+
 
     enum class ActivationType { Sigmoid = 's', Tanh = 't', ReLU = 'r', LeakyReLU = 'l' };
 
@@ -119,6 +124,7 @@ namespace NN {
 
     class NeuralNetwork {
     public:
+
         std::vector<Layer> layers;
 
         NeuralNetwork(const std::vector<int>& topology) {
@@ -135,6 +141,64 @@ namespace NN {
             }
             return inputs;
         }
+        void save(const std::string& filename) {
+            std::ofstream file(filename, std::ios::binary);
+            if (!file.is_open()) {
+                std::cerr << "Error saving model!" << std::endl;
+                return;
+            }
+
+            // 1. Save Number of Layers
+            int numLayers = layers.size();
+            file.write((char*)&numLayers, sizeof(int));
+
+            // 2. Save Each Layer
+            for (auto& layer : layers) {
+                // Save Architecture
+                file.write((char*)&layer.numNodesIn, sizeof(int));
+                file.write((char*)&layer.numNodesOut, sizeof(int));
+                file.write((char*)&layer.actType, sizeof(ActivationType));
+
+                // Save Data
+                file.write((char*)layer.weights.data(), layer.weights.size() * sizeof(float));
+                file.write((char*)layer.biases.data(), layer.biases.size() * sizeof(float));
+            }
+            file.close();
+            std::cout << "Model saved to " << filename << std::endl;
+        }
+
+        void load(const std::string& filename) {
+            std::ifstream file(filename, std::ios::binary);
+            if (!file.is_open()) {
+                std::cerr << "Error loading model!" << std::endl;
+                return;
+            }
+
+            layers.clear();
+            int numLayers;
+            file.read((char*)&numLayers, sizeof(int));
+
+            for (int i = 0; i < numLayers; i++) {
+                int nIn, nOut;
+                ActivationType act;
+
+                // Read Architecture
+                file.read((char*)&nIn, sizeof(int));
+                file.read((char*)&nOut, sizeof(int));
+                file.read((char*)&act, sizeof(ActivationType));
+
+                // Create Layer
+                layers.emplace_back(nIn, nOut, act);
+
+                // Read Data
+                auto& l = layers.back();
+                file.read((char*)l.weights.data(), l.weights.size() * sizeof(float));
+                file.read((char*)l.biases.data(), l.biases.size() * sizeof(float));
+            }
+            file.close();
+            std::cout << "Model loaded from " << filename << std::endl;
+        }
+
 
         // THE TRAINING FUNCTION
         void train(const std::vector<float>& inputs, const std::vector<float>& targets, float learningRate) {

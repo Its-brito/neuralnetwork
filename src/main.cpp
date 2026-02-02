@@ -36,13 +36,19 @@ int main() {
 
     if (trainingData.empty() || testData.empty()) return 1;
 
-    NN::NeuralNetwork net({784, 128,64, 10});
+    NN::NeuralNetwork net({784, 128,64, 10}); // Neural Network Layers - - -
 
     std::cout << "Training (1 Epoch)..." << std::endl;
     for (const auto& img : trainingData) {
-        net.train(img.pixels, img.target, 0.05f);
+        net.train(img.pixels, img.target, 0.05f); //learning rate of 0.05
     }
     std::cout << "Training Complete." << std::endl;
+
+    // EXPORT THE MODEL
+    net.save("mnist_model.bin");
+
+
+
 
     // --- PART 2: GRAPHICAL INTERFACE ---
 

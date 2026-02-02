@@ -15,3 +15,9 @@ executable('neuralnetwok',
            # CRITICAL: You must list the libraries here so the linker uses them
            dependencies : [sfml_graphics, sfml_window, sfml_system]
 )
+
+executable('draw',
+           'src/draw.cpp',
+           install : true,
+           dependencies : [sfml_graphics, sfml_window, sfml_system]
+)
