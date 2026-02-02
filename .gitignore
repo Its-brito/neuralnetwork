@@ -1,1 +1,6 @@
-/dataset
+dataset
+src/mnist_train.csv
+src/mnist_train.csv
+dataset/
+src/mnist_train.csv
+src/mnist_test.csv
