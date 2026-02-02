@@ -1,3 +1,3 @@
 # neuralnetwok
 
-A description of this project.
+Implementation of a "fully fledged" neural network as a way to study for Introduction to Deep Learning @TUM (I2DL)
