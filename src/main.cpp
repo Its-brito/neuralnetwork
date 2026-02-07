@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <SFML/Graphics.hpp>
 #include <iomanip> // For std::setprecision
+#include <random>
 
 // Helper to find the index of the max value
 int getPrediction(const std::vector<float>& output) {
@@ -20,7 +21,7 @@ int getPrediction(const std::vector<float>& output) {
 
 int main() {
     // --- PART 1: SETUP & TRAINING ---
-    // Update path if needed, or use the one that worked for you
+    // Update path !!!!!!!!!!!!!!!!!        
     std::string basePath = "/home/manuel/Projects/NeuralNetwok/dataset/MNIST_CSV/";
 
     // Check if fonts exist (Common Linux path)
@@ -36,11 +37,52 @@ int main() {
 
     if (trainingData.empty() || testData.empty()) return 1;
 
-    NN::NeuralNetwork net({784, 128,64, 10}); // Neural Network Layers - - -
+    NN::NeuralNetwork net({784, 64, 10}); // Neural Network Layers - - -
 
-    std::cout << "Training (1 Epoch)..." << std::endl;
-    for (const auto& img : trainingData) {
-        net.train(img.pixels, img.target, 0.05f); //learning rate of 0.05
+    // Setup RNG for on-the-fly augmentation (scaling + translation)
+    std::random_device rd;
+    std::mt19937 rng(rd());
+    std::uniform_int_distribution<int> shiftDist(-2, 2); // shift by -2..2 pixels
+    std::bernoulli_distribution translateProb(0.5); // 50% chance to translate
+    std::bernoulli_distribution scaleProb(0.5); // 50% chance to scale
+    std::uniform_real_distribution<float> scaleDist(0.85f, 1.15f); // scale range
+
+    int epochs = 5; // number of epochs to train
+    // Augmentation schedule: only apply augmentation for epochs in [augment_start, augment_end]
+    int augment_start = 2; // 1-based epoch index when augmentation begins
+    int augment_end = 5;   // 1-based epoch index when augmentation ends
+    std::cout << "Training (" << epochs << " epochs, with augmentation)..." << std::endl;
+
+    for (int e = 0; e < epochs; ++e) {
+        std::shuffle(trainingData.begin(), trainingData.end(), rng);
+        std::cout << "Epoch " << (e + 1) << "/" << epochs << "\n";
+
+        bool augmentEnabledThisEpoch = ( (e+1) >= augment_start && (e+1) <= augment_end );
+
+        for (const auto& img : trainingData) {
+            // 1) Train on the original image
+            net.train(img.pixels, img.target, 0.05f);
+
+            // 2) Optionally create an augmented copy and train on it as well
+            bool didAug = false;
+            std::vector<float> aug = img.pixels;
+
+            if (augmentEnabledThisEpoch && scaleProb(rng)) {
+                float s = scaleDist(rng);
+                aug = ImgProc::MnistLoader::scaleImage(aug, s);
+                didAug = true;
+            }
+            if (augmentEnabledThisEpoch && translateProb(rng)) {
+                int dx = shiftDist(rng);
+                int dy = shiftDist(rng);
+                aug = ImgProc::MnistLoader::translateImage(aug, dx, dy);
+                didAug = true;
+            }
+
+            if (didAug) {
+                net.train(aug, img.target, 0.05f);
+            }
+        }
     }
     std::cout << "Training Complete." << std::endl;
 
@@ -52,8 +94,8 @@ int main() {
 
     // --- PART 2: GRAPHICAL INTERFACE ---
 
-    // Window is wider now (800x600) to fit text on the right
-    sf::RenderWindow window(sf::VideoMode(800, 600), "MNIST Neural Net Viewer");
+    // Window (800x600) to fit text on the right
+    sf::RenderWindow window(sf::VideoMode(800,600), "MNIST Neural Net Viewer");
     window.setFramerateLimit(60);
 
     // 1. Load Font

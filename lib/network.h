@@ -67,7 +67,8 @@ namespace NN {
 
         // 2. BACKWARD PASS (Gradient Descent)
         // Returns: Gradients for the PREVIOUS layer
-        std::vector<float> backPropagate(const std::vector<float>& outputGradients, float learningRate) {
+        // `l1` is the L1 regularization strength (lambda). If >0, apply L1 penalty to weights.
+        std::vector<float> backPropagate(const std::vector<float>& outputGradients, float learningRate, float l1 = 0.0f) {
             std::vector<float> inputGradients(numNodesIn, 0.0f);
 
             for (int out = 0; out < numNodesOut; out++) {
@@ -87,9 +88,16 @@ namespace NN {
                     // (Chain Rule: dC/dInput = dC/dOutput * dOutput/dInput)
                     inputGradients[in] += delta * weights[weightIndex];
 
+                    // L1 regularization term (subgradient): lambda * sign(w)
+                    float l1term = 0.0f;
+                    if (l1 != 0.0f) {
+                        float w = weights[weightIndex];
+                        l1term = (w > 0.0f) ? 1.0f : (w < 0.0f ? -1.0f : 0.0f);
+                    }
+
                     // Update Weight
-                    // W_new = W_old - (LearningRate * Delta * Input)
-                    weights[weightIndex] -= learningRate * delta * lastInputs[in];
+                    // W_new = W_old - learningRate * (delta * input + l1 * sign(w))
+                    weights[weightIndex] -= learningRate * (delta * lastInputs[in] + l1 * l1term);
                 }
             }
             return inputGradients;
@@ -201,7 +209,7 @@ namespace NN {
 
 
         // THE TRAINING FUNCTION
-        void train(const std::vector<float>& inputs, const std::vector<float>& targets, float learningRate) {
+        void train(const std::vector<float>& inputs, const std::vector<float>& targets, float learningRate, float l1 = 0.0f) {
             // 1. Forward Pass (Fill the "memory" of the layers)
             std::vector<float> results = feedForward(inputs);
 
@@ -214,7 +222,7 @@ namespace NN {
 
             // 3. Backward Pass (Loop reversed)
             for (int i = layers.size() - 1; i >= 0; i--) {
-                gradients = layers[i].backPropagate(gradients, learningRate);
+                gradients = layers[i].backPropagate(gradients, learningRate, l1);
             }
         }
     };
